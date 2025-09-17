@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>استعلام عن رصيد يمن فورجي (PHP)</title>
+    <style>
+        body {
+            font-family: 'Cairo', sans-serif;
+            background: #f0f2f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+        }
+        .container {
+            background: #fff;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+            width: 100%;
+            max-width: 400px;
+            text-align: center;
+        }
+        h2 {
+            color: #2e2e72;
+            margin-top: 0;
+        }
+        input[type="tel"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.2em;
+            text-align: center;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            box-sizing: border-box; /* لإصلاح الحجم */
+            margin-bottom: 15px;
+        }
+        button {
+            width: 100%;
+            padding: 12px;
+            font-size: 1.1em;
+            background: #2e2e72;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        button:hover {
+            background: #4a4acb;
+        }
+        button:disabled {
+            background: #999;
+            cursor: not-allowed;
+        }
+        #result {
+            margin-top: 20px;
+            font-size: 1.1em;
+            padding: 15px;
+            border-radius: 8px;
+            display: none; /* مخفي افتراضياً */
+        }
+        #result.loading {
+            display: block;
+            background: #eaf6ff;
+            color: #0056b3;
+            border: 1px solid #b3d7ff;
+        }
+        #result.success {
+            display: block;
+            background: #e6f7ec;
+            color: #1e663c;
+            border: 1px solid #b7e4c7;
+        }
+        #result.error {
+            display: block;
+            background: #fdeaea;
+            color: #a82a2a;
+            border: 1px solid #f8c6c6;
+        }
+        .balance-info p {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 8px;
+        }
+        .balance-info p strong {
+            color: #2e2e72;
+        }
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600&display=swap" rel="stylesheet">
+</head>
+<body>
+
+    <div class="container">
+        <h2>الاستعلام عن رصيد يمن فورجي</h2>
+        <form id="balanceForm">
+            <div class="form-group">
+                <input type="tel" id="modemNumber" placeholder="ادخل رقم المودم (9 أرقام)" 
+                       pattern="1[0-9]{8}" 
+                       title="يجب أن يبدأ الرقم بـ 1 ويتكون من 9 أرقام" required>
+            </div>
+            <button type="submit" id="submitButton">استعلام</button>
+        </form>
+        
+        <div id="result"></div>
+    </div>
+
+    <script>
+        const form = document.getElementById('balanceForm');
+        const input = document.getElementById('modemNumber');
+        const button = document.getElementById('submitButton');
+        const resultDiv = document.getElementById('result');
+
+        form.addEventListener('submit', async function(event) {
+            event.preventDefault(); 
+            
+            const modemNumber = input.value;
+
+            button.disabled = true;
+            button.textContent = 'جاري البحث...';
+            resultDiv.className = 'loading'; 
+            resultDiv.textContent = 'جاري جلب البيانات، يرجى الانتظار...';
+
+            try {
+                // ----------------------------------------------------
+                // !! انتبه: هذا هو الرابط الذي تم تعديله
+                // ----------------------------------------------------
+                const response = await fetch('query.php', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ modem: modemNumber })
+                });
+
+                if (!response.ok) {
+                    throw new Error('حدث خطأ في الشبكة أو الخادم.');
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.className = 'success';
+                    
+                    let resultsHtml = '<h4>تفاصيل الرصيد:</h4><div class="balance-info">';
+                    for (const [key, value] of Object.entries(data.details)) {
+                        resultsHtml += `<p><strong>${key}:</strong> <span>${value}</span></p>`;
+                    }
+                    resultsHtml += '</div>';
+                    resultDiv.innerHTML = resultsHtml;
+
+                } else {
+                    throw new Error(data.message || 'فشل جلب البيانات.');
+                }
+
+            } catch (error) {
+                resultDiv.className = 'error';
+                resultDiv.textContent = error.message;
+            } finally {
+                button.disabled = false;
+                button.textContent = 'استعلام';
+            }
+        });
+    </script>
+
+</body>
+</html>
